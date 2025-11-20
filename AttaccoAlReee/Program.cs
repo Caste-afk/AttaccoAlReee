@@ -142,7 +142,7 @@ namespace AttaccoAlReee
                 }
                 else if (azione == "end")
                 {
-                    string msg = "Re non catturato, hai perso!";
+                    string msg = "Re non catturato, hai perso!\n\n";
                     Console.WriteLine(msg);
                     ScriviSuFile(msg);
                     return;
@@ -173,7 +173,7 @@ namespace AttaccoAlReee
 
         private static void ScriviSuFile(string text)
         {
-            string path = @"data\output.txt";
+            string path = @"data\registro_partite.txt";
             using (StreamWriter sw = new StreamWriter(path, true))
             {
                 sw.WriteLine(text);
