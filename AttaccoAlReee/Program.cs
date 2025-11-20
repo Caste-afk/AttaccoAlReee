@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace AttaccoAlReee
 {
@@ -18,7 +19,9 @@ namespace AttaccoAlReee
             pedoneAttivo = 0;
             guardiaAttiva = 0;
 
-            Console.WriteLine("===BENVENUTO IN CATTURA IL REEE===\n");
+            string benvenuto = "===BENVENUTO IN CATTURA IL REEE===";
+            Console.WriteLine(benvenuto);
+            ScriviSuFile(benvenuto);
 
             string text = leggiInput(); // legge il file di testo
             string[] azioni = CostruisciPersonaggi(text); // costruisce i personaggi
@@ -36,20 +39,20 @@ namespace AttaccoAlReee
 
         private static string[] CostruisciPersonaggi(string text)
         {
-            string[] righe = text.Split(new[] { '\n', '\r' });
+            string[] righe = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);//elimina dall'array possibili spazi vuoti, senza non va!!!
 
-            re = new CRe(righe[0]);
+            re = new CRe(righe[0].Trim());
 
-            string[] stringaGuardie = righe[1].Split(' ');
+            string[] stringaGuardie = righe[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
             foreach (string guardia in stringaGuardie)
             {
-                guardie.Add(new CGuardia(guardia.ToLower()));
+                guardie.Add(new CGuardia(guardia.Trim().ToLower()));
             }
 
-            string[] stringaPedoni = righe[2].Split(' ');
+            string[] stringaPedoni = righe[2].Split(' ', StringSplitOptions.RemoveEmptyEntries);
             foreach (string pedone in stringaPedoni)
             {
-                pedoni.Add(new CPedone(pedone.ToLower()));
+                pedoni.Add(new CPedone(pedone.Trim().ToLower()));
             }
 
             string[] resto = new string[righe.Length - 3];
@@ -59,59 +62,79 @@ namespace AttaccoAlReee
 
         private static void LeggiCombattimento(string[] azioni)
         {
+            if (azioni.Length > 100)
+            {
+                Console.WriteLine("Numero comandi >100!!\nUscita in corso!");
+                return;
+            }
+
             foreach (var a in azioni)
             {
                 if (string.IsNullOrWhiteSpace(a))
-                    continue; //ignora righe vuote
+                    continue; // ignora righe vuote
 
-                string[] dati = a.Split(' ');
-                string azione = dati[0].ToLower();
-                string nome = dati.Length > 1 ? dati[1].ToLower() : "";
+                string[] dati = a.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                string azione = dati[0].Trim().ToLower();
+                string nome = dati.Length > 1 ? dati[1].Trim().ToLower() : "";
 
                 if (azione == "cattura")
                 {
+                    // controlla sempre prima le guardie
                     int idxGuardia = TrovaPersone(nome, false);
-                    int idxPedone = TrovaPersone(nome, true);
-
                     if (idxGuardia != -1)
                     {
                         CGuardia g = guardie[idxGuardia];
-
-                        Console.WriteLine(g.Cattura());
+                        string msg = g.Cattura();
+                        Console.WriteLine(msg);
+                        ScriviSuFile(msg);
                         guardie.RemoveAt(idxGuardia);
 
                         if (idxGuardia <= guardiaAttiva && guardiaAttiva > 0)
                             guardiaAttiva--;
                     }
-                    else if (idxPedone != -1)
-                    {
-                        CPedone p = pedoni[idxPedone];
-                        Console.WriteLine(p.Cattura());
-                        pedoni.RemoveAt(idxPedone);
-
-                        if (idxPedone <= pedoneAttivo && pedoneAttivo > 0)
-                            pedoneAttivo--;
-                    }
                     else
                     {
-                        Console.WriteLine($"{nome} è già catturato!");
+                        int idxPedone = TrovaPersone(nome, true);
+                        if (idxPedone != -1)
+                        {
+                            CPedone p = pedoni[idxPedone];
+                            string msg = p.Cattura();
+                            Console.WriteLine(msg);
+                            ScriviSuFile(msg);
+                            pedoni.RemoveAt(idxPedone);
+
+                            if (idxPedone <= pedoneAttivo && pedoneAttivo > 0)
+                                pedoneAttivo--;
+                        }
+                        else
+                        {
+                            string msg = $"{nome} è già stato catturato!";
+                            Console.WriteLine(msg);
+                            ScriviSuFile(msg);
+                        }
                     }
                 }
                 else if (azione == "attacca")
                 {
                     if (guardiaAttiva < guardie.Count)
                     {
-                        Console.WriteLine(guardie[guardiaAttiva].DifendiRe(null, null));
+                        string msg = guardie[guardiaAttiva].DifendiRe(null, null);
+                        Console.WriteLine(msg);
+                        ScriviSuFile(msg);
                         guardiaAttiva++;
                     }
                     else if (pedoneAttivo < pedoni.Count)
                     {
-                        Console.WriteLine(pedoni[pedoneAttivo].DifendiRe(null, null));
+                        string msg = pedoni[pedoneAttivo].DifendiRe(null, null);
+                        Console.WriteLine(msg);
+                        ScriviSuFile(msg);
                         pedoneAttivo++;
                     }
                     else
                     {
-                        Console.WriteLine("Nessuno può più difendere il re. Hai vinto!");
+                        string msg = "Nessuno può più difendere il re. Hai vinto!";
+                        Console.WriteLine(msg);
+                        ScriviSuFile(msg);
                         return;
                     }
 
@@ -119,19 +142,21 @@ namespace AttaccoAlReee
                 }
                 else if (azione == "end")
                 {
-                    Console.WriteLine("Re non catturato, hai perso!");
+                    string msg = "Re non catturato, hai perso!";
+                    Console.WriteLine(msg);
+                    ScriviSuFile(msg);
                     return;
                 }
             }
         }
 
-        private static int TrovaPersone(string nome, bool lista)
+        private static int TrovaPersone(string nome, bool lista)// true pedone, false guardia
         {
             if (lista)
             {
                 for (int i = 0; i < pedoni.Count; i++)
                 {
-                    if (pedoni[i].GetNome().ToLower() == nome)
+                    if (pedoni[i].GetNome().Trim().ToLower() == nome)
                         return i;
                 }
             }
@@ -139,11 +164,20 @@ namespace AttaccoAlReee
             {
                 for (int i = 0; i < guardie.Count; i++)
                 {
-                    if (guardie[i].GetNome().ToLower() == nome)
+                    if (guardie[i].GetNome().Trim().ToLower() == nome)
                         return i;
                 }
             }
             return -1;
+        }
+
+        private static void ScriviSuFile(string text)
+        {
+            string path = @"data\output.txt";
+            using (StreamWriter sw = new StreamWriter(path, true))
+            {
+                sw.WriteLine(text);
+            }
         }
     }
 }
