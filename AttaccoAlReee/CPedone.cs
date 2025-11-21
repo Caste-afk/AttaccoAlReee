@@ -14,7 +14,7 @@ namespace AttaccoAlReee
         }
         public string DifendiRe(object sender, EventArgs e)
         {
-            return $"{nome} difende il re!";
+            return $"{nome} si prepara!";
         }
 
         public string Cattura()

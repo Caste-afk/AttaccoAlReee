@@ -118,14 +118,14 @@ namespace AttaccoAlReee
                 {
                     if (guardiaAttiva < guardie.Count)
                     {
-                        string msg = guardie[guardiaAttiva].DifendiRe(null, null);
+                        string msg = $"{re.GetNome()} è sotto attacco!    {guardie[guardiaAttiva].DifendiRe(null, null)}";
                         Console.WriteLine(msg);
                         ScriviSuFile(msg);
                         guardiaAttiva++;
                     }
                     else if (pedoneAttivo < pedoni.Count)
                     {
-                        string msg = pedoni[pedoneAttivo].DifendiRe(null, null);
+                        string msg = $"{re.GetNome} è sotto attacco!{pedoni[pedoneAttivo].DifendiRe(null, null)}";
                         Console.WriteLine(msg);
                         ScriviSuFile(msg);
                         pedoneAttivo++;
