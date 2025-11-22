@@ -10,12 +10,15 @@ namespace AttaccoAlReee
         static List<CGuardia> guardie;
         static List<CPedone> pedoni;
 
-        static Dictionary<CGuardia, EventHandler> handlerGuardie = new Dictionary<CGuardia, EventHandler>();
-        static Dictionary<CPedone, EventHandler> handlerPedoni = new Dictionary<CPedone, EventHandler>();
+        static Dictionary<CGuardia, EventHandler> handlerGuardie;
+        static Dictionary<CPedone, EventHandler> handlerPedoni;
 
 
         static void Main(string[] args)
         {
+            handlerGuardie = new Dictionary<CGuardia, EventHandler>();
+            handlerPedoni = new Dictionary<CPedone, EventHandler>();
+
             guardie = new List<CGuardia>();
             pedoni = new List<CPedone>();
 
@@ -50,10 +53,9 @@ namespace AttaccoAlReee
                 EventHandler handler = (sender, e) =>
                 {
                     string msg = guardia.DifendiRe(sender, e);
-                    if (!string.IsNullOrEmpty(msg))
-                        ScriviLog($"    La Guardia {guardia.GetNome()} sta difendendo");
+                    ScriviLog($"    La Guardia {guardia.GetNome()} sta difendendo");
                 };
-                re.attaccato += handler;
+                re.attaccato += handler;//metto tutti in ascolto
                 handlerGuardie[guardia] = handler;
                 guardie.Add(guardia);
             }
@@ -65,8 +67,7 @@ namespace AttaccoAlReee
                 EventHandler handler = (sender, e) =>
                 {
                     string msg = pedone.DifendiRe(sender, e);
-                    if (!string.IsNullOrEmpty(msg))
-                        ScriviLog($"    Il Pedone {pedone.GetNome()} si sta preparando");
+                    ScriviLog($"    Il Pedone {pedone.GetNome()} si sta preparando");
                 };
                 re.attaccato += handler;
                 handlerPedoni[pedone] = handler;
