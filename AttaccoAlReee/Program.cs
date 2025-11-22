@@ -9,50 +9,68 @@ namespace AttaccoAlReee
         static CRe re;
         static List<CGuardia> guardie;
         static List<CPedone> pedoni;
-        static int pedoneAttivo;
-        static int guardiaAttiva;
+
+        static Dictionary<CGuardia, EventHandler> handlerGuardie = new Dictionary<CGuardia, EventHandler>();
+        static Dictionary<CPedone, EventHandler> handlerPedoni = new Dictionary<CPedone, EventHandler>();
+
 
         static void Main(string[] args)
         {
             guardie = new List<CGuardia>();
             pedoni = new List<CPedone>();
-            pedoneAttivo = 0;
-            guardiaAttiva = 0;
 
-            string benvenuto = "===BENVENUTO IN CATTURA IL REEE===";
-            Console.WriteLine(benvenuto);
-            ScriviSuFile(benvenuto);
 
-            string text = leggiInput(); // legge il file di testo
-            string[] azioni = CostruisciPersonaggi(text); // costruisce i personaggi
+            ScriviLog("=== BENVENUTO IN CATTURA IL REEE ===\n");
+
+            string text = LeggiInput();
+            string[] azioni = CostruisciPersonaggi(text);
+
             LeggiCombattimento(azioni);
+
+            ScriviLog("\n=== FINE PARTITA ===");
         }
 
-        private static string leggiInput()
+        private static string LeggiInput()
         {
             string path = @"data\file.txt";
-            using (StreamReader r = new StreamReader(path))
-            {
-                return r.ReadToEnd();
-            }
+            using StreamReader r = new StreamReader(path);
+            return r.ReadToEnd();
         }
 
         private static string[] CostruisciPersonaggi(string text)
         {
-            string[] righe = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);//elimina dall'array possibili spazi vuoti, senza non va!!!
+            string[] righe = text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
 
             re = new CRe(righe[0].Trim());
 
-            string[] stringaGuardie = righe[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            foreach (string guardia in stringaGuardie)
+            string[] nomiGuardie = righe[1].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (string g in nomiGuardie)
             {
-                guardie.Add(new CGuardia(guardia.Trim().ToLower()));
+                var guardia = new CGuardia(g.Trim().ToLower());
+                EventHandler handler = (sender, e) =>
+                {
+                    string msg = guardia.DifendiRe(sender, e);
+                    if (!string.IsNullOrEmpty(msg))
+                        ScriviLog($"    La Guardia {guardia.GetNome()} sta difendendo");
+                };
+                re.attaccato += handler;
+                handlerGuardie[guardia] = handler;
+                guardie.Add(guardia);
             }
 
-            string[] stringaPedoni = righe[2].Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            foreach (string pedone in stringaPedoni)
+            string[] nomiPedoni = righe[2].Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            foreach (string p in nomiPedoni)
             {
-                pedoni.Add(new CPedone(pedone.Trim().ToLower()));
+                var pedone = new CPedone(p.Trim().ToLower());
+                EventHandler handler = (sender, e) =>
+                {
+                    string msg = pedone.DifendiRe(sender, e);
+                    if (!string.IsNullOrEmpty(msg))
+                        ScriviLog($"    Il Pedone {pedone.GetNome()} si sta preparando");
+                };
+                re.attaccato += handler;
+                handlerPedoni[pedone] = handler;
+                pedoni.Add(pedone);
             }
 
             string[] resto = new string[righe.Length - 3];
@@ -62,122 +80,69 @@ namespace AttaccoAlReee
 
         private static void LeggiCombattimento(string[] azioni)
         {
-            if (azioni.Length > 100)
+            foreach (var riga in azioni)
             {
-                Console.WriteLine("Numero comandi >100!!\nUscita in corso!");
-                return;
-            }
+                if (string.IsNullOrWhiteSpace(riga)) continue;
 
-            foreach (var a in azioni)
-            {
-                if (string.IsNullOrWhiteSpace(a))
-                    continue; // ignora righe vuote
+                string[] dati = riga.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                string comando = dati[0].ToLower();
+                string nome = dati.Length > 1 ? dati[1].ToLower() : "";
 
-                string[] dati = a.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-                string azione = dati[0].Trim().ToLower();
-                string nome = dati.Length > 1 ? dati[1].Trim().ToLower() : "";
-
-                if (azione == "cattura")
+                switch (comando)
                 {
-                    // controlla sempre prima le guardie
-                    int idxGuardia = TrovaPersone(nome, false);
-                    if (idxGuardia != -1)
-                    {
-                        CGuardia g = guardie[idxGuardia];
-                        string msg = g.Cattura();
-                        Console.WriteLine(msg);
-                        ScriviSuFile(msg);
-                        guardie.RemoveAt(idxGuardia);
+                    case "cattura":
+                        if (!CatturaPersonaggio(nome))
+                            ScriviLog($"    {nome} è già stato catturato!");
+                        break;
 
-                        if (idxGuardia <= guardiaAttiva && guardiaAttiva > 0)
-                            guardiaAttiva--;
-                    }
-                    else
-                    {
-                        int idxPedone = TrovaPersone(nome, true);
-                        if (idxPedone != -1)
-                        {
-                            CPedone p = pedoni[idxPedone];
-                            string msg = p.Cattura();
-                            Console.WriteLine(msg);
-                            ScriviSuFile(msg);
-                            pedoni.RemoveAt(idxPedone);
+                    case "attacca":
+                        ScriviLog($"\n=== ATTACCO AL RE {re.GetNome().ToUpper()} ===");
+                        ScriviLog($"Il Re {re.GetNome()} è sotto attacco!");
+                        re.SubisciAttacco();
+                        break;
 
-                            if (idxPedone <= pedoneAttivo && pedoneAttivo > 0)
-                                pedoneAttivo--;
-                        }
-                        else
-                        {
-                            string msg = $"{nome} è già stato catturato!";
-                            Console.WriteLine(msg);
-                            ScriviSuFile(msg);
-                        }
-                    }
-                }
-                else if (azione == "attacca")
-                {
-                    if (guardiaAttiva < guardie.Count)
-                    {
-                        string msg = $"{re.GetNome()} è sotto attacco!    {guardie[guardiaAttiva].DifendiRe(null, null)}";
-                        Console.WriteLine(msg);
-                        ScriviSuFile(msg);
-                        guardiaAttiva++;
-                    }
-                    else if (pedoneAttivo < pedoni.Count)
-                    {
-                        string msg = $"{re.GetNome} è sotto attacco!{pedoni[pedoneAttivo].DifendiRe(null, null)}";
-                        Console.WriteLine(msg);
-                        ScriviSuFile(msg);
-                        pedoneAttivo++;
-                    }
-                    else
-                    {
-                        string msg = "Nessuno può più difendere il re. Hai vinto!";
-                        Console.WriteLine(msg);
-                        ScriviSuFile(msg);
+                    case "end":
+                        ScriviLog($"\nRe non catturato, hai perso!");
                         return;
-                    }
-
-                    re.SubisciAttacco();
-                }
-                else if (azione == "end")
-                {
-                    string msg = "Re non catturato, hai perso!\n\n";
-                    Console.WriteLine(msg);
-                    ScriviSuFile(msg);
-                    return;
                 }
             }
         }
 
-        private static int TrovaPersone(string nome, bool lista)// true pedone, false guardia
+        private static bool CatturaPersonaggio(string nome)
         {
-            if (lista)
+            foreach (var g in guardie)
             {
-                for (int i = 0; i < pedoni.Count; i++)
+                if (g.GetNome() == nome && !g.catturato)
                 {
-                    if (pedoni[i].GetNome().Trim().ToLower() == nome)
-                        return i;
+                    re.attaccato -= handlerGuardie[g];
+                    handlerGuardie.Remove(g);
+                    ScriviLog($"    Cattura Guardia {g.GetNome()}");
+                    g.Cattura();
+                    return true;
                 }
             }
-            else
+
+            foreach (var p in pedoni)
             {
-                for (int i = 0; i < guardie.Count; i++)
+                if (p.GetNome() == nome && !p.catturato)
                 {
-                    if (guardie[i].GetNome().Trim().ToLower() == nome)
-                        return i;
+                    re.attaccato -= handlerPedoni[p];
+                    handlerPedoni.Remove(p);
+                    ScriviLog($"    Cattura Pedone {p.GetNome()}");
+                    p.Cattura();
+                    return true;
                 }
             }
-            return -1;
+
+            return false;
         }
 
-        private static void ScriviSuFile(string text)
+        private static void ScriviLog(string msg)
         {
-            string path = @"data\registro_partite.txt";
-            using (StreamWriter sw = new StreamWriter(path, true))
-            {
-                sw.WriteLine(text);
-            }
+            string path = @"data\output.txt";
+            Console.WriteLine(msg);
+            using StreamWriter sw = new StreamWriter(path, true);
+            sw.WriteLine(msg);
         }
     }
 }
